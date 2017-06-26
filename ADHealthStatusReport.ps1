@@ -61,10 +61,10 @@ $Report = @'
   </style> 
  </head>
  <body> 
-  <table width='100%'>"
+  <table width='100%'>
   <tr bgcolor='Lavender'>
   <td colspan='7' height='25' align='center'>
-  <font face='tahoma' color='#003399' size='4'><strong>Active Directory Health Check</strong></font>" 
+  <font face='tahoma' color='#003399' size='4'><strong>Active Directory Health Check</strong></font>
   </td>
   </tr> 
   </table>
@@ -91,12 +91,13 @@ $getForest = [system.directoryservices.activedirectory.Forest]::GetCurrentForest
 
 $DCServers = $getForest.domains | ForEach-Object {$_.DomainControllers} | ForEach-Object {$_.Name}
 
+$DCServers = $DCServers | Sort
 
 ## Run report
 
 Foreach ($DC in $DCServers) {
         
-    Add-Content $report "<tr>"
+    $Report += "<tr>"
 
     $Status = 0
 
@@ -106,13 +107,13 @@ Foreach ($DC in $DCServers) {
 
         Write-Output "$DC : `t Ping Success"
 
-        Add-Content $Report "<td bgcolor= 'GainsBoro' align=center><B>$DC</B></td>"
-        Add-Content $Report "<td bgcolor= 'Aquamarine' align=center><B>Success</B></td>" }
+        $Report += "<td bgcolor= 'GainsBoro' align=center><B>$DC</B></td>"
+        $Report += "<td bgcolor= 'Aquamarine' align=center><B>Success</B></td>" }
     ELSE {
         Write-Output "$DC :`t Ping Fail"
 
-        Add-Content $Report "<td bgcolor= 'GainsBoro' align=center><B>$DC</B></td>"
-        Add-Content $Report "<td bgcolor= 'Crimson' align=center><B>Ping Fail</B></td>" 
+        $Report += "<td bgcolor= 'GainsBoro' align=center><B>$DC</B></td>"
+        $Report += "<td bgcolor= 'Crimson' align=center><B>Ping Fail</B></td>" 
 
         $Status = 1 }
 
@@ -126,7 +127,7 @@ Foreach ($DC in $DCServers) {
         IF ($serviceStatus.state -like "Running") {
             Write-Output "$DC :`t Netlogon Service: Time Out"
 
-            Add-Content $report "<td bgcolor= 'Yellow' align=center><B>NetlogonTimeout</B></td>"
+            $Report += "<td bgcolor= 'Yellow' align=center><B>NetlogonTimeout</B></td>"
 
             Stop-Job $serviceStatus 
             
@@ -135,11 +136,11 @@ Foreach ($DC in $DCServers) {
 
             $SvcState = (Receive-Job $ServiceStatus).Status
 
-            IF ($SvcState -eq "Running"){ Add-Content $report "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
-            ELSE { Add-Content $report "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
+            IF ($SvcState -eq "Running"){ $Report += "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
+            ELSE { $Report += "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
             } 
     }
-    ELSE { Add-Content $report "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
 
     ## NTDS Service Status ##
 
@@ -151,7 +152,7 @@ Foreach ($DC in $DCServers) {
         IF ($serviceStatus.state -like "Running") {
             Write-Output "$DC :`t NTDS Service: Time Out"
 
-            Add-Content $report "<td bgcolor= 'Yellow' align=center><B>NTDSTimeout</B></td>"
+            $Report += "<td bgcolor= 'Yellow' align=center><B>NTDSTimeout</B></td>"
 
             Stop-Job $serviceStatus 
             
@@ -160,11 +161,11 @@ Foreach ($DC in $DCServers) {
 
             $SvcState = (Receive-Job $ServiceStatus).Status
 
-            IF ($SvcState -eq "Running"){ Add-Content $report "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
-            ELSE { Add-Content $report "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
+            IF ($SvcState -eq "Running"){ $Report += "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
+            ELSE { $Report += "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
             }
     }
-    ELSE { Add-Content $report "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
 
     ## DNS Service Status ##
 
@@ -176,7 +177,7 @@ Foreach ($DC in $DCServers) {
         IF ($serviceStatus.state -like "Running") {
             Write-Output "$DC :`t DNS Service: Time Out"
 
-            Add-Content $report "<td bgcolor= 'Yellow' align=center><B>DNSTimeout</B></td>"
+            $Report += "<td bgcolor= 'Yellow' align=center><B>DNSTimeout</B></td>"
 
             Stop-Job $serviceStatus 
             
@@ -185,11 +186,11 @@ Foreach ($DC in $DCServers) {
 
             $SvcState = (Receive-Job $ServiceStatus).Status
 
-            IF ($SvcState -eq "Running"){ Add-Content $report "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
-            ELSE { Add-Content $report "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
+            IF ($SvcState -eq "Running"){ $Report += "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
+            ELSE { $Report += "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
             }
         }
-    ELSE { Add-Content $report "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
 
     ## Netlogon DCDiag Check ##
 
@@ -202,7 +203,7 @@ Foreach ($DC in $DCServers) {
         IF ($DiagCheck.state -like "Running") {
             Write-Output "$DC :`t Diag Check Netlogon: Time Out"
 
-            Add-Content $report "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
+            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
 
             Stop-Job $DiagCheck 
             
@@ -211,11 +212,11 @@ Foreach ($DC in $DCServers) {
             
             $DiagCheckResult = Receive-job $DiagCheck
 
-            IF ($DiagCheckResult -like "*$DC passed test NetLogons*") { Add-Content $Report "<td bgcolor= 'Aquamarine' align=center><B>NetlogonsPassed</B></td>" }
-            ELSE {Add-Content $report "<td bgcolor= 'Coral' align=center><B>NetlogonsFail</B></td>"} 
+            IF ($DiagCheckResult -like "*passed test NetLogons*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>NetlogonsPassed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>NetlogonsFail</B></td>"} 
             }
     }             
-    ELSE { Add-Content $report "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
 
     ## Replications DCDiag Check ##
 
@@ -228,7 +229,7 @@ Foreach ($DC in $DCServers) {
         IF ($DiagCheck.state -like "Running") {
             Write-Output "$DC :`t Diag Check Replications: Time Out"
 
-            Add-Content $report "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
+            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
 
             Stop-Job $DiagCheck 
             
@@ -237,11 +238,11 @@ Foreach ($DC in $DCServers) {
             
             $DiagCheckResult = Receive-job $DiagCheck
 
-            IF ($DiagCheckResult -like "*$DC passed test Replications*") { Add-Content $Report "<td bgcolor= 'Aquamarine' align=center><B>ReplicationsPassed</B></td>" }
-            ELSE {Add-Content $report "<td bgcolor= 'Coral' align=center><B>ReplicationsFail</B></td>"} 
+            IF ($DiagCheckResult -like "*passed test Replications*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>ReplicationsPassed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>ReplicationsFail</B></td>"} 
             }               
     }
-    ELSE { Add-Content $report "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
 
     ## Services DCDiag Check ##
 
@@ -254,7 +255,7 @@ Foreach ($DC in $DCServers) {
         IF ($DiagCheck.state -like "Running") {
             Write-Output "$DC :`t Diag Check Services: Time Out"
 
-            Add-Content $report "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
+            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
 
             Stop-Job $DiagCheck 
             
@@ -263,11 +264,11 @@ Foreach ($DC in $DCServers) {
             
             $DiagCheckResult = Receive-job $DiagCheck
 
-            IF ($DiagCheckResult -like "*$DC passed test Services*") { Add-Content $Report "<td bgcolor= 'Aquamarine' align=center><B>ServicesPassed</B></td>" }
-            ELSE {Add-Content $report "<td bgcolor= 'Coral' align=center><B>ServicesFail</B></td>"} 
+            IF ($DiagCheckResult -like "*passed test Services*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>ServicesPassed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>ServicesFail</B></td>"} 
             }               
     }
-    ELSE { Add-Content $report "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
 
     ## Advertising DCDiag Check ##
 
@@ -280,7 +281,7 @@ Foreach ($DC in $DCServers) {
         IF ($DiagCheck.state -like "Running") {
             Write-Output "$DC :`t Diag Check Advertising: Time Out"
 
-            Add-Content $report "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
+            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
 
             Stop-Job $DiagCheck 
             
@@ -289,11 +290,11 @@ Foreach ($DC in $DCServers) {
             
             $DiagCheckResult = Receive-job $DiagCheck
 
-            IF ($DiagCheckResult -like "*$DC passed test Advertising*") { Add-Content $Report "<td bgcolor= 'Aquamarine' align=center><B>AdvertisingPassed</B></td>" }
-            ELSE {Add-Content $report "<td bgcolor= 'Coral' align=center><B>ServicesFail</B></td>"} 
+            IF ($DiagCheckResult -like "*passed test Advertising*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>AdvertisingPassed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>ServicesFail</B></td>"} 
             }               
     }
-    ELSE { Add-Content $report "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
 
     ## FSMOCheck DCDiag Check ##
 
@@ -306,7 +307,7 @@ Foreach ($DC in $DCServers) {
         IF ($DiagCheck.state -like "Running") {
             Write-Output "$DC :`t Diag Check FSMOCheck: Time Out"
 
-            Add-Content $report "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
+            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
 
             Stop-Job $DiagCheck 
             
@@ -315,20 +316,22 @@ Foreach ($DC in $DCServers) {
             
             $DiagCheckResult = Receive-job $DiagCheck
 
-            IF ($DiagCheckResult -like "*passed test*") { Add-Content $Report "<td bgcolor= 'Aquamarine' align=center><B>FSMOCheckPassed</B></td>" }
-            ELSE {Add-Content $report "<td bgcolor= 'Coral' align=center><B>FSMOCheckFail</B></td>"} 
+            IF ($DiagCheckResult -like "*passed test*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>FSMOCheckPassed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>FSMOCheckFail</B></td>"} 
             }               
     }
-    ELSE { Add-Content $report "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
+
+    $Report += "</tr>"
 
 }
 
 # Prepare report HTML Footer
 
-Add-Content $Report "</tr>"
-Add-content $Report  "</table>" 
-Add-Content $Report "</body>" 
-Add-Content $Report "</html>" 
+$Report += "</tr>"
+$Report +=  "</table>" 
+$Report += "</body>" 
+$Report += "</html>" 
 
 ## Output results
 
