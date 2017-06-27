@@ -131,7 +131,7 @@ Foreach ($DC in $DCServers) {
 
             Stop-Job $serviceStatus 
             
-            $Staus = 1 }
+            $Status = 1 }
         ELSE {
 
             $SvcState = (Receive-Job $ServiceStatus).Status
@@ -156,7 +156,7 @@ Foreach ($DC in $DCServers) {
 
             Stop-Job $serviceStatus 
             
-            $Staus = 1 }
+            $Status = 1 }
         ELSE {
 
             $SvcState = (Receive-Job $ServiceStatus).Status
@@ -181,7 +181,7 @@ Foreach ($DC in $DCServers) {
 
             Stop-Job $serviceStatus 
             
-            $Staus = 1 }
+            $Status = 1 }
         ELSE {
 
             $SvcState = (Receive-Job $ServiceStatus).Status
@@ -207,7 +207,7 @@ Foreach ($DC in $DCServers) {
 
             Stop-Job $DiagCheck 
             
-            $Staus = 1 }
+            $Status = 1 }
         ELSE {
             
             $DiagCheckResult = Receive-job $DiagCheck
@@ -233,7 +233,7 @@ Foreach ($DC in $DCServers) {
 
             Stop-Job $DiagCheck 
             
-            $Staus = 1 }
+            $Status = 1 }
         ELSE {
             
             $DiagCheckResult = Receive-job $DiagCheck
@@ -259,7 +259,7 @@ Foreach ($DC in $DCServers) {
 
             Stop-Job $DiagCheck 
             
-            $Staus = 1 }
+            $Status = 1 }
         ELSE {
             
             $DiagCheckResult = Receive-job $DiagCheck
@@ -285,7 +285,7 @@ Foreach ($DC in $DCServers) {
 
             Stop-Job $DiagCheck 
             
-            $Staus = 1 }
+            $Status = 1 }
         ELSE {
             
             $DiagCheckResult = Receive-job $DiagCheck
@@ -311,7 +311,7 @@ Foreach ($DC in $DCServers) {
 
             Stop-Job $DiagCheck 
             
-            $Staus = 1 }
+            $Status = 1 }
         ELSE {
             
             $DiagCheckResult = Receive-job $DiagCheck
