@@ -64,7 +64,7 @@ $Report = @'
   <table width='100%'>
   <tr bgcolor='Lavender'>
   <td colspan='7' height='25' align='center'>
-  <font face='tahoma' color='#003399' size='4'><strong>Active Directory Health Check</strong></font>
+  <font face='tahoma' color='#003399' size='4'><strong>Active Directory Health Status Report</strong></font>
   </td>
   </tr> 
   </table>
@@ -87,15 +87,13 @@ $Report = @'
 
 ## Get list of domain controllers to process
 
-$getForest = [system.directoryservices.activedirectory.Forest]::GetCurrentForest()
-
-$DCServers = $getForest.domains | ForEach-Object {$_.DomainControllers} | ForEach-Object {$_.Name}
-
-$DCServers = $DCServers | Sort
+$DomainInfo = Get-ADDomain
+$DNSRoot = $DomainInfo.DNSRoot
+$DomainControllers = $DomainInfo.ReplicaDirectoryServers | Sort
 
 ## Run report
 
-Foreach ($DC in $DCServers) {
+Foreach ($DC in $DomainControllers) {
         
     $Report += "<tr>"
 
@@ -108,219 +106,95 @@ Foreach ($DC in $DCServers) {
         Write-Output "$DC : `t Ping Success"
 
         $Report += "<td bgcolor= 'GainsBoro' align=center><B>$DC</B></td>"
-        $Report += "<td bgcolor= 'Aquamarine' align=center><B>Success</B></td>" }
+        $Report += "<td bgcolor= 'LightGreen' align=center><B>Responsive</B></td>" }
     ELSE {
         Write-Output "$DC :`t Ping Fail"
 
         $Report += "<td bgcolor= 'GainsBoro' align=center><B>$DC</B></td>"
-        $Report += "<td bgcolor= 'Crimson' align=center><B>Ping Fail</B></td>" 
+        $Report += "<td bgcolor= 'Crimson' align=center><B>Unresponsive</B></td>" 
 
         $Status = 1 }
 
-    ## Netlogon Service Check ##
-
     IF ( $Status -eq 0 ) {
 
-        $ServiceStatus = Start-Job -ScriptBlock {Get-Service -ComputerName $($args[0]) -Name "Netlogon" -ErrorAction SilentlyContinue} -ArgumentList $DC
+        ## Checking the status of the NetLogon, NTDS and DNS Services on a DC
+         
+        $ServiceStatus = Start-Job -ScriptBlock { Get-Service -ComputerName $($args[0]) -Name "netlogon","NTDS","DNS" -ErrorAction SilentlyContinue } -ArgumentList $DC
         Wait-Job $serviceStatus -Timeout $timeout
 
         IF ($serviceStatus.state -like "Running") {
-            Write-Output "$DC :`t Netlogon Service: Time Out"
+            Write-Output "$DC :`t Service Check timed out"
 
-            $Report += "<td bgcolor= 'Yellow' align=center><B>NetlogonTimeout</B></td>"
+            $Report += "<td bgcolor= 'Crimson' align=center><B>Timeout</B></td>"
+            $Report += "<td bgcolor= 'Crimson' align=center><B>Timeout</B></td>"
+            $Report += "<td bgcolor= 'Crimson' align=center><B>Timeout</B></td>"
 
-            Stop-Job $serviceStatus 
-            
-            $Status = 1 }
+            Stop-Job $serviceStatus }
         ELSE {
-
-            $SvcState = (Receive-Job $ServiceStatus).Status
-
-            IF ($SvcState -eq "Running"){ $Report += "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
-            ELSE { $Report += "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
-            } 
-    }
-    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
-
-    ## NTDS Service Status ##
-
-    IF ( $Status -eq 0 ) {
-
-        $ServiceStatus = Start-Job -ScriptBlock {Get-Service -ComputerName $($args[0]) -Name "NTDS" -ErrorAction SilentlyContinue} -ArgumentList $DC
-        Wait-Job $serviceStatus -Timeout $timeout
-
-        IF ($serviceStatus.state -like "Running") {
-            Write-Output "$DC :`t NTDS Service: Time Out"
-
-            $Report += "<td bgcolor= 'Yellow' align=center><B>NTDSTimeout</B></td>"
-
-            Stop-Job $serviceStatus 
             
-            $Status = 1 }
+            $SvcState = Receive-Job $ServiceStatus
+
+            $NetlogonState = $SvcState | Where-Object {$_.Name -eq "NetLogon"} 
+            IF ($NetlogonState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
+            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>" }
+
+            $NTDSState = $SvcState | Where-Object {$_.Name -eq "NTDS"}
+            IF ($NTDSState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
+            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>" }
+
+            $DNSState = $SvcState | Where-Object {$_.Name -eq "DNS"} 
+            IF ($DNSState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
+            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>" }
+
+            }
+
+        ## Checking the DCDIAG status of the specified tests on a DC
+
+        $DiagCheck = start-job -scriptblock { DCDIAG /test:Advertising /test:NetLogons /test:Replications /test:Services /test:FSMOCheck /s:$($args[0])} -ArgumentList $DC
+        Wait-Job $DiagCheck -Timeout 60
+
+        IF ( $DiagCheck.state -like "Running" ) {
+            Write-Output "$DC :`t DCDIAG Tests timed out"
+
+            $Report += "<td bgcolor= 'Crimson' align=center><B>Timeout</B></td>"
+            $Report += "<td bgcolor= 'Crimson' align=center><B>Timeout</B></td>"
+            $Report += "<td bgcolor= 'Crimson' align=center><B>Timeout</B></td>"
+            $Report += "<td bgcolor= 'Crimson' align=center><B>Timeout</B></td>"
+            $Report += "<td bgcolor= 'Crimson' align=center><B>Timeout</B></td>"
+
+            Stop-Job $serviceStatus }
         ELSE {
+            
+            $DiagCheckResult = Receive-job $DiagCheck
+            
+            IF ($DiagCheckResult -like "*passed test NetLogons*") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>"}
 
-            $SvcState = (Receive-Job $ServiceStatus).Status
+            IF ($DiagCheckResult -like "*passed test Replications*") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>"}
 
-            IF ($SvcState -eq "Running"){ $Report += "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
-            ELSE { $Report += "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
+            IF ($DiagCheckResult -like "*passed test Services*") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>"} 
+
+            IF ($DiagCheckResult -like "*passed test Advertising*") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>"} 
+
+            IF ($DiagCheckResult -like "*$DNSRoot passed test*") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
+            ELSE {$Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>"} 
+            
             }
     }
-    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
-
-    ## DNS Service Status ##
-
-    IF ( $Status -eq 0 ) {
-
-        $ServiceStatus = Start-Job -ScriptBlock {Get-Service -ComputerName $($args[0]) -Name "DNS" -ErrorAction SilentlyContinue} -ArgumentList $DC
-        Wait-Job $serviceStatus -Timeout $timeout
-
-        IF ($serviceStatus.state -like "Running") {
-            Write-Output "$DC :`t DNS Service: Time Out"
-
-            $Report += "<td bgcolor= 'Yellow' align=center><B>DNSTimeout</B></td>"
-
-            Stop-Job $serviceStatus 
-            
-            $Status = 1 }
-        ELSE {
-
-            $SvcState = (Receive-Job $ServiceStatus).Status
-
-            IF ($SvcState -eq "Running"){ $Report += "<td bgcolor= 'Aquamarine' align=center><B>$SvcState</B></td>" }
-            ELSE { $Report += "<td bgcolor= 'Coral' align=center><B>$SvcState</B></td>" } 
-            }
+    ELSE {
+        
+        $Report += "<td bgcolor= 'PapayaWhip' align=center><B>-</B></td>"
+        $Report += "<td bgcolor= 'PapayaWhip' align=center><B>-</B></td>"
+        $Report += "<td bgcolor= 'PapayaWhip' align=center><B>-</B></td>"
+        $Report += "<td bgcolor= 'PapayaWhip' align=center><B>-</B></td>"
+        $Report += "<td bgcolor= 'PapayaWhip' align=center><B>-</B></td>"
+        $Report += "<td bgcolor= 'PapayaWhip' align=center><B>-</B></td>"
+        $Report += "<td bgcolor= 'PapayaWhip' align=center><B>-</B></td>"
+        $Report += "<td bgcolor= 'PapayaWhip' align=center><B>-</B></td>"
         }
-    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
-
-    ## Netlogon DCDiag Check ##
-
-    IF ( $Status -eq 0 ) {
-
-        $DiagCheck = start-job -scriptblock {dcdiag /test:netlogons /s:$($args[0])} -ArgumentList $DC
-
-        Wait-Job $DiagCheck -Timeout $timeout
-        
-        IF ($DiagCheck.state -like "Running") {
-            Write-Output "$DC :`t Diag Check Netlogon: Time Out"
-
-            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
-
-            Stop-Job $DiagCheck 
-            
-            $Status = 1 }
-        ELSE {
-            
-            $DiagCheckResult = Receive-job $DiagCheck
-
-            IF ($DiagCheckResult -like "*passed test NetLogons*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>NetlogonsPassed</B></td>" }
-            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>NetlogonsFail</B></td>"} 
-            }
-    }             
-    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
-
-    ## Replications DCDiag Check ##
-
-    IF ( $Status -eq 0 ) {
-
-        $DiagCheck = start-job -scriptblock {dcdiag /test:Replications /s:$($args[0])} -ArgumentList $DC
-
-        Wait-Job $DiagCheck -Timeout $timeout
-        
-        IF ($DiagCheck.state -like "Running") {
-            Write-Output "$DC :`t Diag Check Replications: Time Out"
-
-            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
-
-            Stop-Job $DiagCheck 
-            
-            $Status = 1 }
-        ELSE {
-            
-            $DiagCheckResult = Receive-job $DiagCheck
-
-            IF ($DiagCheckResult -like "*passed test Replications*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>ReplicationsPassed</B></td>" }
-            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>ReplicationsFail</B></td>"} 
-            }               
-    }
-    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
-
-    ## Services DCDiag Check ##
-
-    IF ( $Status -eq 0 ) {
-
-        $DiagCheck = start-job -scriptblock {dcdiag /test:Services /s:$($args[0])} -ArgumentList $DC
-
-        Wait-Job $DiagCheck -Timeout $timeout
-        
-        IF ($DiagCheck.state -like "Running") {
-            Write-Output "$DC :`t Diag Check Services: Time Out"
-
-            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
-
-            Stop-Job $DiagCheck 
-            
-            $Status = 1 }
-        ELSE {
-            
-            $DiagCheckResult = Receive-job $DiagCheck
-
-            IF ($DiagCheckResult -like "*passed test Services*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>ServicesPassed</B></td>" }
-            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>ServicesFail</B></td>"} 
-            }               
-    }
-    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
-
-    ## Advertising DCDiag Check ##
-
-    IF ( $Status -eq 0 ) {
-
-        $DiagCheck = start-job -scriptblock {dcdiag /test:Advertising /s:$($args[0])} -ArgumentList $DC
-
-        Wait-Job $DiagCheck -Timeout $timeout
-        
-        IF ($DiagCheck.state -like "Running") {
-            Write-Output "$DC :`t Diag Check Advertising: Time Out"
-
-            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
-
-            Stop-Job $DiagCheck 
-            
-            $Status = 1 }
-        ELSE {
-            
-            $DiagCheckResult = Receive-job $DiagCheck
-
-            IF ($DiagCheckResult -like "*passed test Advertising*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>AdvertisingPassed</B></td>" }
-            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>ServicesFail</B></td>"} 
-            }               
-    }
-    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
-
-    ## FSMOCheck DCDiag Check ##
-
-    IF ( $Status -eq 0 ) {
-
-        $DiagCheck = start-job -scriptblock {dcdiag /test:FSMOCheck /s:$($args[0])} -ArgumentList $DC
-
-        Wait-Job $DiagCheck -Timeout $timeout
-        
-        IF ($DiagCheck.state -like "Running") {
-            Write-Output "$DC :`t Diag Check FSMOCheck: Time Out"
-
-            $Report += "<td bgcolor= 'Yellow' align=center><B>JobTimeout</B></td>"
-
-            Stop-Job $DiagCheck 
-            
-            $Status = 1 }
-        ELSE {
-            
-            $DiagCheckResult = Receive-job $DiagCheck
-
-            IF ($DiagCheckResult -like "*passed test*") { $Report += "<td bgcolor= 'Aquamarine' align=center><B>FSMOCheckPassed</B></td>" }
-            ELSE {$Report += "<td bgcolor= 'Coral' align=center><B>FSMOCheckFail</B></td>"} 
-            }               
-    }
-    ELSE { $Report += "<td bgcolor= 'Crimson' align=center><B>TimeoutJobNotRun</B></td>" }
 
     $Report += "</tr>"
 
