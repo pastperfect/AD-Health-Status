@@ -64,7 +64,7 @@ $Report = @'
   <table width='100%'>
   <tr bgcolor='Lavender'>
   <td colspan='7' height='25' align='center'>
-  <font face='tahoma' color='#003399' size='4'><strong>Active Directory Health Check</strong></font>
+  <font face='tahoma' color='#003399' size='4'><strong>Active Directory Health Status Report</strong></font>
   </td>
   </tr> 
   </table>
@@ -90,8 +90,6 @@ $Report = @'
 $DomainInfo = Get-ADDomain
 $DNSRoot = $DomainInfo.DNSRoot
 $DomainControllers = $DomainInfo.ReplicaDirectoryServers | Sort
-
-
 
 ## Run report
 
