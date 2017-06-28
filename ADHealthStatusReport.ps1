@@ -94,6 +94,8 @@ $DomainControllers = $DomainInfo.ReplicaDirectoryServers | Sort
 ## Run report
 
 Foreach ($DC in $DomainControllers) {
+
+    $DCShortName = $DC -replace ".$DNSRoot",""
         
     $Report += "<tr>"
 
@@ -105,7 +107,7 @@ Foreach ($DC in $DomainControllers) {
 
         Write-Output "$DC : `t Ping Success"
 
-        $Report += "<td bgcolor= 'GainsBoro' align=center><B>$DC</B></td>"
+        $Report += "<td bgcolor= 'GainsBoro' align=center><B>$DCShortName</B></td>"
         $Report += "<td bgcolor= 'LightGreen' align=center><B>Responsive</B></td>" }
     ELSE {
         Write-Output "$DC :`t Ping Fail"
