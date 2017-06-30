@@ -99,15 +99,16 @@ Foreach ($DC in $DomainControllers) {
         
     $Report += "<tr>"
 
+    $Report += "<td bgcolor= 'GainsBoro' align=center><B>$DCShortName</B></td>"
+
     $Status = 0
 
     ## Connectivity Check ##
 
-    IF ( Test-Connection -ComputerName $DC -Count 1 -Quiet -ErrorAction SilentlyContinue) {
+    IF ( Test-Connection -ComputerName $DC -Count 4 -Quiet -ErrorAction SilentlyContinue) {
 
         Write-Output "$DC : `t Ping Success"
 
-        $Report += "<td bgcolor= 'GainsBoro' align=center><B>$DCShortName</B></td>"
         $Report += "<td bgcolor= 'LightGreen' align=center><B>Responsive</B></td>" }
     ELSE {
         Write-Output "$DC :`t Ping Fail"
