@@ -25,7 +25,7 @@ IF((!(Test-Path $ReportOutputPath))){ New-Item $ReportOutputPath -Type Directory
 
 $Reports = Get-ChildItem $ReportOutputPath -Filter *$ReportSuffex*.html
 
-IF ($Reports.count -ge $ReportsKept) { $Reports | Sort CreationTime | Select -First 1 | Remove-Item }
+IF ($Reports.count -ge $ReportsKept) { $Reports | Sort-Object CreationTime | Select-Object -First 1 | Remove-Item }
 
 ## Create report HTML Header
 
@@ -89,7 +89,7 @@ $Report = @'
 
 $DomainInfo = Get-ADDomain
 $DNSRoot = $DomainInfo.DNSRoot
-$DomainControllers = $DomainInfo.ReplicaDirectoryServers | Sort
+$DomainControllers = $DomainInfo.ReplicaDirectoryServers | Sort-Object
 
 ## Run report
 
