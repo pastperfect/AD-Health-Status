@@ -148,16 +148,19 @@ Foreach ($DC in $DomainControllers) {
             $SvcState = Receive-Job $ServiceStatus
 
             $NetlogonState = $SvcState | Where-Object {$_.Name -eq "NetLogon"} 
-            IF ($NetlogonState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
-            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>" }
+            IF ($NetlogonState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>"+$NetlogonState.status+"</B></td>" }
+            ELSEIF ($NTDSState.status -eq $null) { $Report += "<td bgcolor= 'LightCoral' align=center><B>Unknown</B></td>" }
+            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>"+$NetlogonState.status+"</B></td>" }
 
             $NTDSState = $SvcState | Where-Object {$_.Name -eq "NTDS"}
-            IF ($NTDSState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
-            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>" }
+            IF ($NTDSState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>"+$NTDSState.status+"</B></td>" }
+            ELSEIF ($NTDSState.status -eq $null) { $Report += "<td bgcolor= 'LightCoral' align=center><B>Unknown</B></td>" }
+            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>"+$NTDSState.status+"</B></td>" }
 
             $DNSState = $SvcState | Where-Object {$_.Name -eq "DNS"} 
-            IF ($DNSState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>Passed</B></td>" }
-            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>Failed</B></td>" }
+            IF ($DNSState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>"+$DNSState.status+"</B></td>" }
+            ELSEIF ($DNSState.status -eq $null) { $Report += "<td bgcolor= 'LightCoral' align=center><B>Unknown</B></td>" }
+            ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>"+$DNSState.status+"</B></td>" }
 
             }
 
