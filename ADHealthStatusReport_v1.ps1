@@ -154,7 +154,7 @@ Foreach ($DC in $DomainControllers) {
         ## Checking the DCDIAG status of the specified tests on a DC
 
         $DiagCheck = start-job -scriptblock { DCDIAG /test:Advertising /test:NetLogons /test:Replications /test:Services /test:FSMOCheck /s:$($args[0])} -ArgumentList $DC
-        Wait-Job $DiagCheck -Timeout 60
+        Wait-Job $DiagCheck -Timeout $Timeout
 
         IF ( $DiagCheck.state -like "Running" ) {
             Write-Output "$DC :`t DCDIAG Tests timed out"
