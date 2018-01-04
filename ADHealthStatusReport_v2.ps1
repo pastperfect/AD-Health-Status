@@ -149,7 +149,7 @@ Foreach ($DC in $DomainControllers) {
 
             $NetlogonState = $SvcState | Where-Object {$_.Name -eq "NetLogon"} 
             IF ($NetlogonState.status -eq "Running") { $Report += "<td bgcolor= 'LightGreen' align=center><B>"+$NetlogonState.status+"</B></td>" }
-            ELSEIF ($NTDSState.status -eq $null) { $Report += "<td bgcolor= 'LightCoral' align=center><B>Unknown</B></td>" }
+            ELSEIF ($NetlogonState.status -eq $null) { $Report += "<td bgcolor= 'LightCoral' align=center><B>Unknown</B></td>" }
             ELSE  { $Report += "<td bgcolor= 'LightCoral' align=center><B>"+$NetlogonState.status+"</B></td>" }
 
             $NTDSState = $SvcState | Where-Object {$_.Name -eq "NTDS"}
